@@ -1,0 +1,51 @@
+# Full v0.1 run. `ssb build` writes the dataset; `ssb run` evaluates every model on it.
+name: main
+seed: 20261118
+
+dataset:
+  path: data/ssb_v0.1.jsonl
+  version: "0.1"
+  questions: {single_hop: 34, multi_hop: 33, unanswerable: 33}
+  paragraph_tokens: 120
+  tolerance: 0.10                  # every paragraph is 108-132 tokens
+  tokenizer: Qwen/Qwen2.5-1.5B-Instruct   # all Qwen2.5 sizes share this tokenizer
+  hard_negative_scorer: embedding
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  offtopic_pool: 400
+  world: {people: 80, towns: 40, companies: 40, inventions: 40}
+
+conditions:
+  sizes: [1, 5, 20, 100]
+  axes: [dilution, noise, redundancy, contradiction, position]
+  base_filler: random              # filler for every axis except noise
+  redundancy_k: [1, 5]
+  contradiction_positions: [before, after]
+  depths: [0.0, 0.5, 1.0]
+  closed_book: true
+
+models:
+  - name: qwen2.5-1.5b
+    model_id: Qwen/Qwen2.5-1.5B-Instruct
+  - name: qwen2.5-7b-4bit
+    model_id: Qwen/Qwen2.5-7B-Instruct
+    quantization: 4bit
+    fallback_model_id: Qwen/Qwen2.5-3B-Instruct
+
+generation:
+  max_new_tokens: 32
+  temperature: 0.0
+
+run:
+  output_dir: results/main
+  cache_dir: .cache/generations
+  questions: null                  # all questions
+  max_gpu_hours: 6.0
+
+eval:
+  bootstrap: 1000
+  ci: 0.95
+  saturation_epsilon: 0.01
+  alpha: 0.05
+  ece_bins: 10
+
+figures_dir: figures
