@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Downloaded source datasets (rebuilt by `ssb build`); generated datasets in data/ are tracked
+data/raw/
+
+# Model-call cache: large, machine-specific, rebuilt on demand
+.cache/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# LaTeX build output
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
+paper/*.synctex.gz
