@@ -27,6 +27,8 @@ conditions:
 models:
   - name: qwen2.5-1.5b
     model_id: Qwen/Qwen2.5-1.5B-Instruct
+    max_batch_tokens: 24576
+    prior_tokens_per_s: 5000
 
 generation:
   max_new_tokens: 32
@@ -34,7 +36,7 @@ generation:
 
 run:
   output_dir: results/smoke
-  cache_dir: .cache/generations
+  cache_dir: results/cache         # under results/ so Kaggle saves it with the output
   questions: 10                    # balanced subset across task types
   max_gpu_hours: 0.25
 

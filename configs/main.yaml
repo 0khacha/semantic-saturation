@@ -26,10 +26,15 @@ conditions:
 models:
   - name: qwen2.5-1.5b
     model_id: Qwen/Qwen2.5-1.5B-Instruct
+    max_batch_tokens: 24576
+    prior_tokens_per_s: 5000       # rough T4 guess; the runner measures the real rate
   - name: qwen2.5-7b-4bit
     model_id: Qwen/Qwen2.5-7B-Instruct
-    quantization: 4bit
-    fallback_model_id: Qwen/Qwen2.5-3B-Instruct
+    quantization: 4bit             # bitsandbytes NF4 under HF
+    vllm_model_id: Qwen/Qwen2.5-7B-Instruct-AWQ   # used only if vLLM is installed
+    max_batch_tokens: 24576
+    prior_tokens_per_s: 1200
+    fallback_model_id: Qwen/Qwen2.5-3B-Instruct   # fp16, if the 7B estimate is over budget
 
 generation:
   max_new_tokens: 32
@@ -37,7 +42,7 @@ generation:
 
 run:
   output_dir: results/main
-  cache_dir: .cache/generations
+  cache_dir: results/cache         # under results/ so Kaggle saves it with the output
   questions: null                  # all questions
   max_gpu_hours: 6.0
 

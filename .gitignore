@@ -24,3 +24,6 @@ paper/*.out
 paper/*.bbl
 paper/*.blg
 paper/*.synctex.gz
+
+# Generation cache (the per-run results/<run>/generations/ files are what we publish)
+results/cache/
