@@ -43,7 +43,11 @@ def test_paragraph_and_token_counts_match_condition(built, counter):
     _, samples, paras = built
     for s in samples:
         ctx = _ctx(s, paras)
-        assert len(ctx) == s["N"]
+        assert len(ctx) == s["n_paragraphs"]
+        evidence = len(s["gold_paragraph_ids"]) + bool(s["conflict_paragraph_id"])
+        assert s["n_paragraphs"] == (max(s["N"], evidence) if s["N"] else 0)
+        if s["n_paragraphs"] > s["N"]:  # level smaller than the evidence: evidence only
+            assert len(ctx) == evidence
         assert all(108 <= p.tokens <= 132 for p in ctx)
         prompt = render_prompt(s["question"], [p.text for p in ctx])
         assert s["token_count"] == counter.count(prompt)
@@ -117,7 +121,7 @@ def test_depth_placement(built):
     for s in samples:
         if s["axis"] != "position":
             continue
-        n, hops = s["N"], len(s["gold_fact_ids"])
+        n, hops = s["n_paragraphs"], len(s["gold_fact_ids"])
         start = s["paragraphs"].index(s["base_gold_ids"][0])
         if s["depth"] == 0.0:
             assert start == 0
@@ -171,6 +175,22 @@ def test_fillers_are_nested_across_sizes(built):
         ns = sorted(by_n)
         for a, b in zip(ns, ns[1:], strict=False):
             assert by_n[a] <= by_n[b]
+
+
+def test_every_question_is_present_at_every_size_level(built, small_cfg):
+    """Curves must compare the same questions at every N (no population shift)."""
+    b, samples, _ = built
+    sizes = set(small_cfg.conditions.sizes)
+    levels = defaultdict(set)
+    for s in samples:
+        levels[(s["question_id"], s["axis"])].add(s["N"])
+    for q in b.questions:
+        axes = ["dilution", "noise"] + (["redundancy"] if q.task_type != "unanswerable" else [])
+        for axis in axes:
+            assert levels[(q.id, axis)] == sizes, (q.id, axis)
+        if q.task_type != "unanswerable":
+            for axis in ("contradiction", "position"):
+                assert levels[(q.id, axis)] == sizes - {1}, (q.id, axis)
 
 
 def test_every_question_has_a_closed_book_sample(built):

@@ -153,6 +153,11 @@ def select_questions(world: World, counts: dict[str, int], seed: int) -> list[Qu
 # --------------------------------------------------------------------------- conditions
 
 
+def n_paragraphs(n_level: int, n_gold: int, n_conflict: int = 0) -> int:
+    """Actual context length for size level N: never fewer than the evidence itself."""
+    return max(n_level, n_gold + n_conflict) if n_level else 0
+
+
 def conditions_for(q: Question, cfg: Config) -> list[dict]:
     """Every condition a question takes part in. One axis varies at a time.
 
@@ -168,8 +173,10 @@ def conditions_for(q: Question, cfg: Config) -> list[dict]:
     if c.closed_book:
         out.append({"axis": "closed_book", "N": 0})
     for n in c.sizes:
-        if n < max(hops, 1):
-            continue
+        # Dilution, noise and redundancy exist at every size level: when the level is
+        # smaller than the evidence (multi-hop at N=1, k=5 copies at N=1 or 5) the
+        # context is the evidence alone (see n_paragraphs), so every question is
+        # present at every level and curves compare the same questions.
         if "dilution" in c.axes:
             out.append({"axis": "dilution", "N": n, "noise_type": c.base_filler})
         if "noise" in c.axes:
@@ -178,7 +185,7 @@ def conditions_for(q: Question, cfg: Config) -> list[dict]:
             continue
         if "redundancy" in c.axes:
             for k in c.redundancy_k:
-                if k > 1 and n >= k * hops:
+                if k > 1:
                     out.append({"axis": "redundancy", "N": n, "noise_type": c.base_filler,
                                 "redundancy_k": k})
         if "contradiction" in c.axes and n >= hops + 1:
@@ -287,7 +294,8 @@ class Builder:
         return [self._sample(q, cond, fillers, sims) for cond in conditions_for(q, self.cfg)]
 
     def _sample(self, q: Question, cond: dict, fillers: dict, sims: dict) -> dict:
-        n, axis = cond["N"], cond["axis"]
+        level, axis = cond["N"], cond["axis"]
+        n = 0
         seed = derive_seed(self.cfg.seed, q.id, *sorted(cond.items()))
         rng = random.Random(seed)
         hops = len(q.facts)
@@ -303,6 +311,7 @@ class Builder:
                 gold = [p for fid in q.facts for p in self._paraphrases(fid, cond["redundancy_k"])]
             else:
                 gold = [self.fact_para[fid] for fid in q.facts]
+            n = n_paragraphs(level, len(gold), 1 if axis == "contradiction" else 0)
 
             if axis == "position":
                 start = perturb.depth_block_start(n, hops, cond["depth"])
@@ -337,7 +346,7 @@ class Builder:
         conflict_id = conflict.id if conflict else None
         filler_sims = [sims[pid] for pid in ids if pid not in gold_set and pid != conflict_id]
         return {
-            "id": "|".join([q.id, axis, f"N{n}"] + [f"{k}={v}" for k, v in sorted(cond.items())
+            "id": "|".join([q.id, axis, f"N{level}"] + [f"{k}={v}" for k, v in sorted(cond.items())
                                                      if k not in ("axis", "N")]),
             "question_id": q.id,
             "task_type": q.task_type,
@@ -351,7 +360,8 @@ class Builder:
             else [],
             "paragraphs": ids,
             "axis": axis,
-            "N": n,
+            "N": level,
+            "n_paragraphs": n,
             "depth": depth,
             "gold_positions": [i for i, pid in enumerate(ids) if pid in gold_set],
             "noise_type": cond.get("noise_type"),
@@ -391,14 +401,18 @@ def check_sample(s: dict, paras: dict, counter: TokenCounter | None,
     errs: list[str] = []
     ctx = [paras[pid] for pid in s["paragraphs"]]
     texts = [p.text for p in ctx]
-    n = s["N"]
+    n = s["n_paragraphs"]
     lo, hi = token_range
 
     def text_of(pid: str) -> str:
         return paras[pid].text
 
+    n_evidence = len(s["gold_paragraph_ids"]) + (1 if s["conflict_paragraph_id"] else 0)
+    if n != n_paragraphs(s["N"], n_evidence):
+        errs.append(f"n_paragraphs={n} but level N={s['N']} with {n_evidence} evidence "
+                    "paragraphs requires max(N, evidence)")
     if len(ctx) != n:
-        errs.append(f"{len(ctx)} paragraphs, expected N={n}")
+        errs.append(f"{len(ctx)} paragraphs, expected {n}")
     if len(set(s["paragraphs"])) != len(s["paragraphs"]):
         errs.append("a paragraph appears twice")
     for p in ctx:

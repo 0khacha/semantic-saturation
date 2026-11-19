@@ -8,8 +8,13 @@ reject anything below.
 ## Design facts the tests rely on
 
 - **Data:** `data/ssb_v0.1.jsonl`, 100 questions (34 single-hop, 33 multi-hop,
-  33 unanswerable) about a fictional world, 2,007 samples. N ∈ {1, 5, 20, 100}
-  paragraphs of 108–132 Qwen2.5 tokens each.
+  33 unanswerable) about a fictional world, 2,173 samples. N ∈ {1, 5, 20, 100} is a
+  size level; each paragraph is 108–132 Qwen2.5 tokens. The context holds
+  max(N, evidence) paragraphs, so a level smaller than the evidence means the evidence
+  alone. Examples: a multi-hop question at N = 1 sees its two gold paragraphs, and
+  k = 5 copies at N = 1 is five paraphrases. Every question is therefore present at
+  every level of the dilution, noise and redundancy curves. Contradiction and position
+  start at N = 5.
 - **Base context (dilution axis):** the gold paragraph(s) plus random off-topic filler.
   The gold paragraph's text is identical in every condition. Every other axis changes
   one thing relative to this base:
@@ -86,6 +91,17 @@ hard-negative axes. We also report ECE(100) − ECE(1).
 Compare N† per axis (dilution, noise, redundancy, position at d=0.5, contradiction
 gold-rate), with "> 100" ranked after 100. Supported if the larger model's N† is later on
 a majority of axes and earlier on none.
+
+## Amendments
+
+**1 (2026-11-19, before any model had seen the dataset).** In the first build, a multi-hop
+question could not appear at N = 1, and k = 5 redundancy could not appear below
+N = 5 (10 for multi-hop). The N = 1 point of each curve then averaged over a
+different set of questions than N ≥ 5, which can fake a rise or a fall. A pipeline
+check with a deterministic stand-in model exposed this. The fix makes N a size level
+with max(N, evidence) paragraphs (see Design facts) and rebuilds the dataset (2,007 → 2,173
+samples). No hypothesis, test or threshold changed. The SSS of contradiction and
+position curves spans N = 5…100; the other curves span 1…100.
 
 ## What counts as exploratory
 
