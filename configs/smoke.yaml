@@ -1,44 +1,52 @@
-# End-to-end check on a T4 in under 15 minutes: same dataset as main, 10 questions,
-# smallest model only.
+# End-to-end check on CPU in under 10 minutes: 20 base examples per task.
 name: smoke
-seed: 20261118
+seed: 20261119
 
-dataset:
-  path: data/ssb_v0.1.jsonl
+data:
+  path: data/ssb_smoke.jsonl
   version: "0.1"
-  questions: {single_hop: 34, multi_hop: 33, unanswerable: 33}
+  raw_dir: data/raw
+  tokenizer: bert-base-uncased        # every token count uses this WordPiece tokenizer
   paragraph_tokens: 120
-  tolerance: 0.10
-  tokenizer: Qwen/Qwen2.5-1.5B-Instruct
-  hard_negative_scorer: embedding
-  embedding_model: sentence-transformers/all-MiniLM-L6-v2
-  offtopic_pool: 400
-  world: {people: 80, towns: 40, companies: 40, inventions: 40}
+  tolerance: 0.10                     # filler, paraphrases and swapped copies: 108-132 tokens
+  examples: {classification: 20, retrieval: 20, qa: 20}
+  qa_unanswerable_share: 0.5
+  random_pool: 300
+  hard_pool: 300
+  selector_model: sentence-transformers/all-mpnet-base-v2   # not an evaluated model
+  ner_model: en_core_web_sm
+  paraphrase_models: [Helsinki-NLP/opus-mt-en-fr, Helsinki-NLP/opus-mt-fr-en]
+  label_judge: fabriceyhc/bert-base-uncased-ag_news          # not an evaluated model
+  device: auto
 
 conditions:
   sizes: [1, 5, 20, 100]
   axes: [dilution, noise, redundancy, contradiction, position]
   base_filler: random
-  redundancy_k: [1, 5]
+  redundancy_k: 5
+  redundancy_modes: [copy, paraphrase]
   contradiction_positions: [before, after]
   depths: [0.0, 0.5, 1.0]
-  closed_book: true
 
 models:
-  - name: qwen2.5-1.5b
-    model_id: Qwen/Qwen2.5-1.5B-Instruct
-    max_batch_tokens: 16384    # N=100 prompts run one at a time
-    prior_tokens_per_s: 5000
-
-generation:
-  max_new_tokens: 32
-  temperature: 0.0
+  - {name: tfidf-lr, task: classification, kind: tfidf_lr}
+  - {name: bert-truncate, task: classification, kind: transformer_cls,
+     model_id: textattack/bert-base-uncased-ag-news, long_input: truncate}
+  - {name: bert-chunk-mean, task: classification, kind: transformer_cls,
+     model_id: textattack/bert-base-uncased-ag-news, long_input: chunk_mean}
+  - {name: tfidf, task: retrieval, kind: tfidf}
+  - {name: bm25, task: retrieval, kind: bm25}
+  - {name: minilm, task: retrieval, kind: dense, model_id: sentence-transformers/all-MiniLM-L6-v2}
+  - {name: distilbert-squad, task: qa, kind: qa, model_id: distilbert-base-cased-distilled-squad,
+     handles_unanswerable: false}
+  - {name: roberta-squad2, task: qa, kind: qa, model_id: deepset/roberta-base-squad2}
 
 run:
   output_dir: results/smoke
-  cache_dir: results/cache         # under results/ so Kaggle saves it with the output
-  questions: 10                    # balanced subset across task types
-  max_gpu_hours: 0.25
+  device: auto
+  max_seq_len: 384
+  doc_stride: 128
+  examples: null
 
 eval:
   bootstrap: 1000

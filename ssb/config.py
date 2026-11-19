@@ -9,79 +9,70 @@ from pathlib import Path
 
 import yaml
 
-TASK_TYPES = ("single_hop", "multi_hop", "unanswerable")
+TASKS = ("classification", "retrieval", "qa")
 AXES = ("dilution", "noise", "redundancy", "contradiction", "position")
 
 
 @dataclass
-class WorldConfig:
-    people: int = 80
-    towns: int = 40
-    companies: int = 40
-    inventions: int = 40
-
-
-@dataclass
-class DatasetConfig:
+class DataConfig:
     path: str = "data/ssb_v0.1.jsonl"
     version: str = "0.1"
-    questions: dict[str, int] = field(
-        default_factory=lambda: {"single_hop": 34, "multi_hop": 33, "unanswerable": 33})
+    raw_dir: str = "data/raw"  # Hugging Face dataset cache, model-made caches (gitignored)
+    tokenizer: str = "bert-base-uncased"  # reference tokenizer for every token count
     paragraph_tokens: int = 120
     tolerance: float = 0.10
-    tokenizer: str = "Qwen/Qwen2.5-1.5B-Instruct"
-    hard_negative_scorer: str = "embedding"  # "embedding" | "tfidf"
-    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
-    offtopic_pool: int = 400
-    world: WorldConfig = field(default_factory=WorldConfig)
+    # base examples per task; QA mixes answerable and unanswerable questions
+    examples: dict[str, int] = field(
+        default_factory=lambda: {"classification": 300, "retrieval": 300, "qa": 300})
+    qa_unanswerable_share: float = 0.5
+    random_pool: int = 3000  # normalised SQuAD-train paragraphs used as random filler
+    hard_pool: int = 4000  # extra normalised paragraphs searched for hard negatives
+    selector_model: str = "sentence-transformers/all-mpnet-base-v2"  # picks hard negatives
+    ner_model: str = "en_core_web_sm"
+    paraphrase_models: list[str] = field(default_factory=lambda: [
+        "Helsinki-NLP/opus-mt-en-fr", "Helsinki-NLP/opus-mt-fr-en"])
+    # judge that checks a classification paraphrase keeps its label (not an evaluated model)
+    label_judge: str = "fabriceyhc/bert-base-uncased-ag_news"
+    device: str = "auto"  # "auto" | "cpu" | "cuda" for the build-time models
 
 
 @dataclass
 class ConditionsConfig:
     sizes: list[int] = field(default_factory=lambda: [1, 5, 20, 100])
     axes: list[str] = field(default_factory=lambda: list(AXES))
-    # Filler used by every axis except `noise`, which compares filler types.
-    base_filler: str = "random"  # "random" | "hard_negative"
-    redundancy_k: list[int] = field(default_factory=lambda: [1, 5])
+    base_filler: str = "random"  # filler for every axis except noise
+    redundancy_k: int = 5
+    redundancy_modes: list[str] = field(default_factory=lambda: ["copy", "paraphrase"])
     contradiction_positions: list[str] = field(default_factory=lambda: ["before", "after"])
     depths: list[float] = field(default_factory=lambda: [0.0, 0.5, 1.0])
-    closed_book: bool = True
 
 
 @dataclass
 class ModelConfig:
     name: str
-    model_id: str
-    quantization: str | None = None  # None | "4bit"
-    backend: str = "auto"  # "auto" (vLLM if installed with a GPU, else HF) | "vllm" | "hf" | "fake"
-    vllm_model_id: str | None = None  # e.g. an AWQ checkpoint when vLLM serves the 4-bit model
-    max_model_len: int = 16384
-    max_batch_size: int = 16
-    max_batch_tokens: int = 24576  # padded prompt tokens per batch (HF backend)
-    fallback_model_id: str | None = None  # used when the runtime estimate is too high
-    prior_tokens_per_s: float = 2000.0  # T4 prompt throughput guess for `ssb estimate`
-
-
-@dataclass
-class GenerationConfig:
-    max_new_tokens: int = 32
-    temperature: float = 0.0
+    task: str
+    kind: str  # tfidf_lr | transformer_cls | tfidf | bm25 | dense | qa
+    model_id: str | None = None
+    long_input: str | None = None  # transformer_cls: "truncate" | "chunk_mean"
+    handles_unanswerable: bool = True  # qa: False -> evaluated on answerable only
+    batch_size: int = 32
 
 
 @dataclass
 class RunConfig:
     output_dir: str = "results/main"
-    cache_dir: str = "results/cache"  # kept under results/ so Kaggle saves it with the output
-    questions: int | None = None  # take a balanced subset of the dataset (smoke runs)
-    max_gpu_hours: float = 6.0
+    device: str = "auto"
+    max_seq_len: int = 384  # QA sliding window
+    doc_stride: int = 128
+    examples: int | None = None  # balanced subset of base examples per task
 
 
 @dataclass
 class EvalConfig:
     bootstrap: int = 1000
     ci: float = 0.95
-    saturation_epsilon: float = 0.01  # N*: marginal gain below 1 accuracy point
-    alpha: float = 0.05  # N†: significance level
+    saturation_epsilon: float = 0.01
+    alpha: float = 0.05
     ece_bins: int = 10
 
 
@@ -89,17 +80,16 @@ class EvalConfig:
 class Config:
     name: str
     seed: int
-    dataset: DatasetConfig = field(default_factory=DatasetConfig)
+    data: DataConfig = field(default_factory=DataConfig)
     conditions: ConditionsConfig = field(default_factory=ConditionsConfig)
     models: list[ModelConfig] = field(default_factory=list)
-    generation: GenerationConfig = field(default_factory=GenerationConfig)
     run: RunConfig = field(default_factory=RunConfig)
     eval: EvalConfig = field(default_factory=EvalConfig)
     figures_dir: str = "figures"
 
     @property
     def token_range(self) -> tuple[int, int]:
-        t, tol = self.dataset.paragraph_tokens, self.dataset.tolerance
+        t, tol = self.data.paragraph_tokens, self.data.tolerance
         return round(t * (1 - tol)), round(t * (1 + tol))
 
 
@@ -118,10 +108,9 @@ def _build(cls, data, where: str):
     kwargs = {}
     for key, value in data.items():
         hint = hints[key]
-        origin = typing.get_origin(hint)
         if dataclasses.is_dataclass(hint):
             value = _build(hint, value, f"{where}.{key}")
-        elif origin is list and dataclasses.is_dataclass(typing.get_args(hint)[0]):
+        elif typing.get_origin(hint) is list and dataclasses.is_dataclass(typing.get_args(hint)[0]):
             item = typing.get_args(hint)[0]
             value = [_build(item, v, f"{where}.{key}[{i}]") for i, v in enumerate(value)]
         kwargs[key] = value
@@ -131,43 +120,46 @@ def _build(cls, data, where: str):
         raise ConfigError(f"{where}: {e}") from None
 
 
+KINDS = {"classification": {"tfidf_lr", "transformer_cls"},
+         "retrieval": {"tfidf", "bm25", "dense"}, "qa": {"qa"}}
+
+
 def validate(cfg: Config) -> None:
-    d, c = cfg.dataset, cfg.conditions
-    if set(d.questions) - set(TASK_TYPES):
-        raise ConfigError(f"dataset.questions: task types must be in {TASK_TYPES}")
-    if any(n < 0 for n in d.questions.values()) or sum(d.questions.values()) == 0:
-        raise ConfigError("dataset.questions: counts must be >= 0 and not all zero")
-    if d.hard_negative_scorer not in ("embedding", "tfidf"):
-        raise ConfigError("dataset.hard_negative_scorer must be 'embedding' or 'tfidf'")
+    d, c = cfg.data, cfg.conditions
+    if set(d.examples) - set(TASKS) or any(n < 1 for n in d.examples.values()):
+        raise ConfigError(f"data.examples: positive counts for tasks in {TASKS}")
+    if not 0 <= d.qa_unanswerable_share < 1:
+        raise ConfigError("data.qa_unanswerable_share must be in [0, 1)")
     if not 0 <= d.tolerance < 1:
-        raise ConfigError("dataset.tolerance must be in [0, 1)")
+        raise ConfigError("data.tolerance must be in [0, 1)")
     if c.sizes != sorted(set(c.sizes)) or c.sizes[0] < 1:
         raise ConfigError("conditions.sizes must be strictly increasing positive integers")
     if set(c.axes) - set(AXES):
         raise ConfigError(f"conditions.axes must be a subset of {AXES}")
     if c.base_filler not in ("random", "hard_negative"):
         raise ConfigError("conditions.base_filler must be 'random' or 'hard_negative'")
+    if c.redundancy_k < 2:
+        raise ConfigError("conditions.redundancy_k must be >= 2")
+    if set(c.redundancy_modes) - {"copy", "paraphrase"}:
+        raise ConfigError("conditions.redundancy_modes: 'copy' and/or 'paraphrase'")
+    if set(c.contradiction_positions) - {"before", "after"}:
+        raise ConfigError("conditions.contradiction_positions: 'before' and/or 'after'")
     if any(not 0 <= x <= 1 for x in c.depths):
         raise ConfigError("conditions.depths must be in [0, 1]")
-    if set(c.contradiction_positions) - {"before", "after"}:
-        raise ConfigError("conditions.contradiction_positions must be 'before'/'after'")
-    if any(not 1 <= k <= 5 for k in c.redundancy_k):
-        raise ConfigError("conditions.redundancy_k must be in [1, 5] (6 templates per fact, "
-                          "one reserved for the conflicting claim)")
     names = [m.name for m in cfg.models]
     if len(names) != len(set(names)):
         raise ConfigError("models: names must be unique")
     for m in cfg.models:
-        if m.quantization not in (None, "4bit"):
-            raise ConfigError(f"models.{m.name}: quantization must be null or '4bit'")
-        if m.backend not in ("auto", "vllm", "hf", "fake"):
-            raise ConfigError(f"models.{m.name}: backend must be auto, vllm, hf or fake")
-        if m.max_batch_size < 1 or m.max_batch_tokens < 1:
-            raise ConfigError(f"models.{m.name}: batch limits must be positive")
-    if cfg.generation.temperature != 0:
-        raise ConfigError("generation.temperature must be 0 (greedy) in v0.1")
-    if cfg.run.questions is not None and cfg.run.questions < 1:
-        raise ConfigError("run.questions must be a positive integer or null")
+        if m.task not in TASKS:
+            raise ConfigError(f"models.{m.name}: task must be one of {TASKS}")
+        if m.kind not in KINDS[m.task]:
+            raise ConfigError(f"models.{m.name}: kind for {m.task} must be in {KINDS[m.task]}")
+        if m.kind == "transformer_cls" and m.long_input not in ("truncate", "chunk_mean"):
+            raise ConfigError(f"models.{m.name}: long_input must be truncate or chunk_mean")
+        if m.kind in ("transformer_cls", "dense", "qa") and not m.model_id:
+            raise ConfigError(f"models.{m.name}: model_id is required")
+    if cfg.run.examples is not None and cfg.run.examples < 1:
+        raise ConfigError("run.examples must be a positive integer or null")
 
 
 def load_config(path: str | Path) -> Config:

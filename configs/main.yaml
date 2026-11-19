@@ -1,50 +1,52 @@
-# Full v0.1 run. `ssb build` writes the dataset; `ssb run` evaluates every model on it.
+# Full v0.1: 300 base examples per task, every axis, every model.
 name: main
-seed: 20261118
+seed: 20261119
 
-dataset:
+data:
   path: data/ssb_v0.1.jsonl
   version: "0.1"
-  questions: {single_hop: 34, multi_hop: 33, unanswerable: 33}
+  raw_dir: data/raw
+  tokenizer: bert-base-uncased        # every token count uses this WordPiece tokenizer
   paragraph_tokens: 120
-  tolerance: 0.10                  # every paragraph is 108-132 tokens
-  tokenizer: Qwen/Qwen2.5-1.5B-Instruct   # all Qwen2.5 sizes share this tokenizer
-  hard_negative_scorer: embedding
-  embedding_model: sentence-transformers/all-MiniLM-L6-v2
-  offtopic_pool: 400
-  world: {people: 80, towns: 40, companies: 40, inventions: 40}
+  tolerance: 0.10                     # filler, paraphrases and swapped copies: 108-132 tokens
+  examples: {classification: 300, retrieval: 300, qa: 300}
+  qa_unanswerable_share: 0.5
+  random_pool: 3000
+  hard_pool: 4000
+  selector_model: sentence-transformers/all-mpnet-base-v2   # not an evaluated model
+  ner_model: en_core_web_sm
+  paraphrase_models: [Helsinki-NLP/opus-mt-en-fr, Helsinki-NLP/opus-mt-fr-en]
+  label_judge: fabriceyhc/bert-base-uncased-ag_news          # not an evaluated model
+  device: auto
 
 conditions:
   sizes: [1, 5, 20, 100]
   axes: [dilution, noise, redundancy, contradiction, position]
-  base_filler: random              # filler for every axis except noise
-  redundancy_k: [1, 5]
+  base_filler: random
+  redundancy_k: 5
+  redundancy_modes: [copy, paraphrase]
   contradiction_positions: [before, after]
   depths: [0.0, 0.5, 1.0]
-  closed_book: true
 
 models:
-  - name: qwen2.5-1.5b
-    model_id: Qwen/Qwen2.5-1.5B-Instruct
-    max_batch_tokens: 16384    # N=100 prompts run one at a time
-    prior_tokens_per_s: 5000       # rough T4 guess; the runner measures the real rate
-  - name: qwen2.5-7b-4bit
-    model_id: Qwen/Qwen2.5-7B-Instruct
-    quantization: 4bit             # bitsandbytes NF4 under HF
-    vllm_model_id: Qwen/Qwen2.5-7B-Instruct-AWQ   # used only if vLLM is installed
-    max_batch_tokens: 16384    # N=100 prompts run one at a time
-    prior_tokens_per_s: 1200
-    fallback_model_id: Qwen/Qwen2.5-3B-Instruct   # fp16, if the 7B estimate is over budget
-
-generation:
-  max_new_tokens: 32
-  temperature: 0.0
+  - {name: tfidf-lr, task: classification, kind: tfidf_lr}
+  - {name: bert-truncate, task: classification, kind: transformer_cls,
+     model_id: textattack/bert-base-uncased-ag-news, long_input: truncate}
+  - {name: bert-chunk-mean, task: classification, kind: transformer_cls,
+     model_id: textattack/bert-base-uncased-ag-news, long_input: chunk_mean}
+  - {name: tfidf, task: retrieval, kind: tfidf}
+  - {name: bm25, task: retrieval, kind: bm25}
+  - {name: minilm, task: retrieval, kind: dense, model_id: sentence-transformers/all-MiniLM-L6-v2}
+  - {name: distilbert-squad, task: qa, kind: qa, model_id: distilbert-base-cased-distilled-squad,
+     handles_unanswerable: false}
+  - {name: roberta-squad2, task: qa, kind: qa, model_id: deepset/roberta-base-squad2}
 
 run:
   output_dir: results/main
-  cache_dir: results/cache         # under results/ so Kaggle saves it with the output
-  questions: null                  # all questions
-  max_gpu_hours: 6.0
+  device: auto
+  max_seq_len: 384
+  doc_stride: 128
+  examples: null
 
 eval:
   bootstrap: 1000
