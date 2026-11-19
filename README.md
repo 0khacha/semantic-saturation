@@ -16,10 +16,10 @@ models) ran on a Kaggle T4; its results are below and in `results/main/`.
 Projet du module *Traitement Automatique du Langage Naturel*, École Nationale Supérieure
 de l'Intelligence Artificielle et Sciences des Données (ENSIASD), Taroudant.
 
-- Yassine Bouachrine
+- Yassine Bouachrine ([@yassinebouachrine](https://github.com/yassinebouachrine))
 - Abdeljalil Nahimy
-- Mohamed Khacha
-- Abdelali Hirri
+- Mohamed Khacha ([@0khacha](https://github.com/0khacha))
+- Abdelali Hirri ([@A4Crzn](https://github.com/A4Crzn))
 
 Enseignant du module : Dr. Adil Baqach.
 
