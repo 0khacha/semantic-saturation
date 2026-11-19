@@ -91,11 +91,13 @@ def library_versions() -> dict:
 
 class Runner:
     def __init__(self, cfg: Config, time_limit_hours: float | None = None,
-                 force: bool = False, log=print):
+                 force: bool = False, log=print, probe_only: bool = False):
         self.cfg = cfg
         self.out = Path(cfg.run.output_dir)
         self.deadline = time.time() + time_limit_hours * 3600 if time_limit_hours else None
         self.force = force
+        self.probe_only = probe_only
+        self.estimates: dict[str, float] = {}
         self.log = log
         samples = load_dataset(cfg.dataset.path)
         self.samples = select_subset(samples, cfg.run.questions)
@@ -138,6 +140,12 @@ class Runner:
             hours = self._run_model(m, remaining)
             spent_hours += hours
             status[m.name] = "done"
+        if self.probe_only:
+            total = sum(self.estimates.values())
+            self.log("estimate summary: " + ", ".join(f"{k} {v:.2f} h"
+                                                      for k, v in self.estimates.items())
+                     + f"; total for the models that would run: {spent_hours:.2f} h "
+                     f"(budget {self.cfg.run.max_gpu_hours} h; all probed: {total:.2f} h)")
         return status
 
     def _run_model(self, m: ModelConfig, budget_hours: float) -> float:
@@ -196,6 +204,7 @@ class Runner:
         entry.update({"model_id": backend.model_id, "backend": backend.name,
                       "info": backend.info(), "estimated_hours": round(est_h, 3)})
         self._save_manifest()
+        self.estimates[m.name] = est_h
         if est_h > budget_hours and not self.force:
             if m.fallback_model_id:
                 self.log(f"[{m.name}] over budget: switching to {m.fallback_model_id}")
@@ -205,9 +214,15 @@ class Runner:
                 _free_gpu()
                 return -1.0
             fit = max(1, math.floor(self.n_questions * budget_hours / est_h))
-            raise BudgetExceeded(
-                f"{m.name}: estimated {est_h:.2f} h exceeds the {budget_hours:.2f} h left. "
-                f"Set run.questions to about {fit} (cut questions, not axes), or pass --force.")
+            msg = (f"{m.name}: estimated {est_h:.2f} h exceeds the {budget_hours:.2f} h left. "
+                   f"Set run.questions to about {fit} (cut questions, not axes), or pass "
+                   "--force.")
+            if not self.probe_only:
+                raise BudgetExceeded(msg)
+            self.log(f"[{m.name}] {msg}")
+        if self.probe_only:  # budget accounting uses the estimate, not the probe time
+            self.log(f"[{m.name}] probe only: stopping before the bulk of the work")
+            return est
         t_start = last_log = time.time()
         rest = [i for i in range(len(batches)) if i not in set(probe)]
         for j, i in enumerate(rest, 1):

@@ -49,7 +49,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     from .run import BudgetExceeded, Runner, TimeLimitReached
 
     cfg = load_config(args.config)
-    runner = Runner(cfg, time_limit_hours=args.time_limit_hours, force=args.force)
+    runner = Runner(cfg, time_limit_hours=args.time_limit_hours, force=args.force,
+                    probe_only=args.probe_only)
     print(f"{cfg.name}: {runner.n_questions} questions, {len(runner.samples)} samples per model")
     try:
         runner.run(only=args.model)
@@ -101,6 +102,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--time-limit-hours", type=float, default=None,
                    help="stop cleanly after this long; rerun to resume")
     p.add_argument("--force", action="store_true", help="ignore the GPU-hour budget")
+    p.add_argument("--probe-only", action="store_true",
+                   help="time one batch per N for each model, print the estimate, stop")
     add("eval", cmd_eval, "score generations and compute metrics")
     p = add("report", cmd_report, "metrics, figures, REPORT.md and README results")
     p.add_argument("--readme", action=argparse.BooleanOptionalAction, default=None,

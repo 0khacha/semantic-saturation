@@ -8,8 +8,9 @@ import os
 import subprocess
 import sys
 
-SSB_CONFIG = "configs/smoke.yaml"
-EXTRA_RUN_ARGS = ""  # e.g. "--time-limit-hours 11" for the main run
+SSB_CONFIG = "configs/main.yaml"
+EXTRA_RUN_ARGS = "--probe-only"  # main run: "--time-limit-hours 11"
+REPORT = "--probe-only" not in EXTRA_RUN_ARGS
 REPO = "https://github.com/0khacha/semantic-saturation.git"
 WORK = "/kaggle/working/ssb"
 
@@ -40,5 +41,6 @@ sh("git log -1 --format='commit %h %s'")
 sh("python --version")
 sh("pip install -q -e '.[run,analysis]'")
 sh(f"ssb run --config {SSB_CONFIG} {EXTRA_RUN_ARGS}")
-sh(f"ssb report --config {SSB_CONFIG}")
+if REPORT:
+    sh(f"ssb report --config {SSB_CONFIG}")
 sh("ls -R results figures | head -50")

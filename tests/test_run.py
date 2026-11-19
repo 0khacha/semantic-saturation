@@ -126,3 +126,16 @@ def test_over_budget_switches_to_fallback(tmp_path, monkeypatch):
     manifest = json.loads((Path(cfg.run.output_dir) / "run_manifest.json").read_text())
     assert "fallback_reason" in manifest["models"]["fake"]
     assert (Path(cfg.run.output_dir) / "generations" / "small-3b.jsonl").exists()
+
+
+def test_probe_only_estimates_without_running_everything(tmp_path, monkeypatch):
+    cfg = _cfg(tmp_path, questions=4)
+    real = models.FakeBackend.generate
+    calls = []
+    monkeypatch.setattr(models.FakeBackend, "generate",
+                        lambda self, p: calls.append(len(p)) or real(self, p))
+    r = Runner(cfg, probe_only=True, log=_quiet)
+    r.run()
+    n_levels = len({s["N"] for s in r.samples})
+    assert len(calls) == n_levels  # exactly one batch per N
+    assert "fake" in r.estimates
