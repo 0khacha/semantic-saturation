@@ -8,9 +8,29 @@ whether classic NLP models stay correct *and* well calibrated. There are no larg
 language models and no text generation: only TF-IDF, BM25 and BERT-family encoders, on
 three kinds of "understanding".
 
-**Status: v0.1 in progress.** The dataset builder, model runner, analysis and report are
-done and pass an end-to-end smoke run on CPU. The full run (300 examples per task) is
-next, on a T4. The results section is written by `ssb report` from the actual run.
+**Status: v0.1 done.** The full run (300 base examples per task, 25,950 samples, eight
+models) ran on a Kaggle T4; its results are below and in `results/main/`.
+
+## Authors
+
+Projet du module *Traitement Automatique du Langage Naturel*, École Nationale Supérieure
+de l'Intelligence Artificielle et Sciences des Données (ENSIASD), Taroudant.
+
+- Yassine Bouachrine
+- Abdeljalil Nahimy
+- Mohamed Khacha
+- Abdelali Hirri
+
+Enseignant du module : Dr. Adil Baqach.
+
+## Deliverables
+
+- [`Projet_NLP_SSB.ipynb`](Projet_NLP_SSB.ipynb): the project notebook (in French), with
+  the problem, data, method, results and discussion, and the team's task split. It runs
+  on CPU in under a minute from the committed dataset and predictions.
+- [`rapport/Rapport_Projet_NLP_SSB.pdf`](rapport/Rapport_Projet_NLP_SSB.pdf): the full
+  written report (in French), rebuilt by `python rapport/make_report.py
+  rapport/Rapport_Projet_NLP_SSB.pdf`.
 
 (An earlier LLM-based version of this benchmark is preserved on the
 [`llm-v0.1`](../../tree/llm-v0.1) branch.)
@@ -69,7 +89,7 @@ ssb report --config configs/smoke.yaml
 # full v0.1 (one T4): print the runtime estimate, then run
 ssb run    --config configs/main.yaml --estimate
 ssb run    --config configs/main.yaml
-ssb report --config configs/main.yaml                 # fills the results section below
+ssb report --config configs/main.yaml --fr            # results section below + French figures
 ```
 
 The committed `data/ssb_v0.1.jsonl` (SHA-256 hashes in its manifest) is the canonical

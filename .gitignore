@@ -11,22 +11,8 @@ dist/
 # Downloaded source datasets (rebuilt by `ssb build`); generated datasets in data/ are tracked
 data/raw/
 
-# Model-call cache: large, machine-specific, rebuilt on demand
-.cache/
-
 # Notebook checkpoints
 .ipynb_checkpoints/
-
-# LaTeX build output
-paper/*.aux
-paper/*.log
-paper/*.out
-paper/*.bbl
-paper/*.blg
-paper/*.synctex.gz
-
-# Generation cache (the per-run results/<run>/generations/ files are what we publish)
-results/cache/
 
 # Smoke-test dataset (rebuilt in minutes; the v0.1 dataset is versioned)
 data/ssb_smoke.*
