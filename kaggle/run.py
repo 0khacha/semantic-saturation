@@ -22,14 +22,21 @@ def sh(cmd: str) -> None:
         sys.exit(code)
 
 
-sh("nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv")
+import torch  # noqa: E402
+
+print("torch", torch.__version__, "| CUDA available:", torch.cuda.is_available(), flush=True)
+if not torch.cuda.is_available():
+    print("No GPU in this session. On Kaggle: verify your phone number (Settings), check the "
+          "weekly GPU quota, and choose Accelerator = GPU T4.", flush=True)
+    sys.exit(1)
+print("GPU:", torch.cuda.get_device_name(0), flush=True)
 if os.path.isdir(WORK):
     sh(f"git -C {WORK} pull --ff-only")
 else:
     sh(f"git clone --depth 1 {REPO} {WORK}")
 os.chdir(WORK)
 sh("git log -1 --format='commit %h %s'")
-sh("python --version && python -c 'import torch; print(\"torch\", torch.__version__)'")
+sh("python --version")
 sh("pip install -q -e '.[run,analysis]'")
 sh(f"ssb run --config {SSB_CONFIG} {EXTRA_RUN_ARGS}")
 sh(f"ssb report --config {SSB_CONFIG}")
