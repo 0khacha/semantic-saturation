@@ -121,7 +121,7 @@ def results_markdown(cfg: Config, res: dict, fig: str) -> str:
     return "\n".join(lines)
 
 
-def write_report(cfg: Config, update_readme: bool) -> dict:
+def write_report(cfg: Config, update_readme: bool, french: bool = False) -> dict:
     from .plots import make_all
 
     out = Path(cfg.run.output_dir)
@@ -134,6 +134,9 @@ def write_report(cfg: Config, update_readme: bool) -> dict:
                                          encoding="utf-8", newline="\n")
     fig_dir = Path(cfg.figures_dir)
     make_all(res["analyses"], res["leaderboard"], [m.name for m in cfg.models], fig_dir)
+    if french:
+        make_all(res["analyses"], res["leaderboard"], [m.name for m in cfg.models],
+                 fig_dir / "fr", lang="fr")
     rel = os.path.relpath(fig_dir, out).replace("\\", "/")
     (out / "REPORT.md").write_text(results_markdown(cfg, res, rel) + "\n", encoding="utf-8",
                                    newline="\n")

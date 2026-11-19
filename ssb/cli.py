@@ -47,7 +47,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     cfg = load_config(args.config)
     update = args.readme if args.readme is not None else cfg.name == "main"
-    res = write_report(cfg, update_readme=update)
+    res = write_report(cfg, update_readme=update, french=args.fr)
     for h in res["hypotheses"]:
         print(f"{h['id']}: {h['verdict']}")
     print(f"wrote {cfg.run.output_dir}/REPORT.md and figures in {cfg.figures_dir}/"
@@ -73,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     p = add("report", cmd_report, "metrics, figures, REPORT.md and README results")
     p.add_argument("--readme", action=argparse.BooleanOptionalAction, default=None,
                    help="update README.md (default: only for the main config)")
+    p.add_argument("--fr", action="store_true",
+                   help="also draw the figures with French labels, in <figures_dir>/fr")
     args = parser.parse_args(argv)
     try:
         return args.func(args)

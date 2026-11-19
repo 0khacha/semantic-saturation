@@ -25,6 +25,55 @@ OUTCOME = {"true": "#2a78d6", "conflicting": "#eb6834", "tie": "#eda100", "other
 TASK_TITLE = {"classification": "A. Topic classification", "retrieval": "B. Passage retrieval",
               "qa": "C. Extractive QA"}
 
+# Every visible string, by language. English is the default; `make_all(..., lang="fr")`
+# draws the same figures with French labels.
+TEXT = {
+    "en": {},
+    "fr": {
+        "A. Topic classification": "A. Classification thématique",
+        "B. Passage retrieval": "B. Recherche de passage",
+        "C. Extractive QA": "C. QA extractive",
+        "accuracy": "précision",
+        "Context size N (paragraphs, log scale)":
+            "Taille du contexte N (paragraphes, échelle log)",
+        "Score vs context size (random filler), 95% bootstrap CI":
+            "Score selon la taille du contexte (remplissage aléatoire), IC bootstrap 95 %",
+        "random": "aléatoire", "hard": "difficile",
+        "Noise type: random (solid) vs hard negatives (dashed)":
+            "Type de bruit : aléatoire (trait plein) vs négatifs difficiles (tirets)",
+        "Signal depth": "Profondeur du signal",
+        "Position: score by signal depth and N":
+            "Position : score selon la profondeur du signal et N",
+        "Redundancy: does repeating the signal slow the decline?":
+            "Redondance : répéter le signal ralentit-il la baisse ?",
+        "true": "vraie réponse", "conflicting": "réponse contradictoire", "tie": "égalité",
+        "other": "autre", "Share": "Part", "B": "Av", "A": "Ap",
+        "Contradiction: conflict placed Before or After the signal, by N":
+            "Contradiction : conflit placé avant (Av) ou après (Ap) le signal, selon N",
+        "perfect calibration": "calibration parfaite", "Mean confidence": "Confiance moyenne",
+        "Calibration as N grows (random filler)":
+            "Calibration quand N augmente (remplissage aléatoire)",
+        "task": "tâche", "model": "modèle", "axis": "axe", "SSS [95% CI]": "SSS [IC 95 %]",
+        "Leaderboard: SSS, saturation point N*, degradation onset N†":
+            "Classement : SSS, point de saturation N*, début de dégradation N†",
+        "Dilution (random filler)": "Dilution (remplissage aléatoire)",
+        "Hard-negative noise": "Bruit (négatifs difficiles)",
+        "Redundancy k=5, copies": "Redondance k=5, copies",
+        "Redundancy k=5, paraphrases": "Redondance k=5, paraphrases",
+        "Position d=0.5": "Position d=0,5",
+        "retrieval": "recherche", "qa": "QA",
+    },
+}
+LANG = "en"
+
+
+def _t(s: str) -> str:
+    return TEXT[LANG].get(s, s)
+
+
+def _pct_label(v: float) -> str:
+    return f"{v:.0%}" if LANG == "en" else f"{v * 100:.0f} %"
+
 
 def _style():
     plt.rcParams.update({
@@ -54,13 +103,13 @@ def _logx(ax, ns):
     ax.set_xscale("log")
     ax.set_xticks(ns, [str(n) for n in ns])
     ax.minorticks_off()
-    ax.set_xlabel("Context size N (paragraphs, log scale)")
+    ax.set_xlabel(_t("Context size N (paragraphs, log scale)"))
 
 
 def _pct(ax, label):
     ax.set_ylim(-0.02, 1.02)
-    ax.set_yticks([0, 0.25, 0.5, 0.75, 1], ["0%", "25%", "50%", "75%", "100%"])
-    ax.set_ylabel(label)
+    ax.set_yticks([0, 0.25, 0.5, 0.75, 1], [_pct_label(v) for v in (0, 0.25, 0.5, 0.75, 1)])
+    ax.set_ylabel(_t(label))
 
 
 def _line(ax, ma, curve, color, marker, label, ls="-"):
@@ -97,9 +146,9 @@ class Figures:
                 ns = _line(ax, self.an[m], "dilution", self.color[m], self.marker[m], m) or ns
             _logx(ax, ns)
             _pct(ax, SCORE_NAME[task])
-            ax.set_title(TASK_TITLE[task])
+            ax.set_title(_t(TASK_TITLE[task]))
             ax.legend(loc="lower left", fontsize=8)
-        _title(fig, "Score vs context size (random filler), 95% bootstrap CI")
+        _title(fig, _t("Score vs context size (random filler), 95% bootstrap CI"))
         return _save(fig, self.out, "fig1_main")
 
     def noise(self):
@@ -109,14 +158,14 @@ class Figures:
             ns = []
             for m in self._models(task):
                 ns = _line(ax, self.an[m], "dilution", self.color[m], self.marker[m],
-                           f"{m} random") or ns
-                _line(ax, self.an[m], "noise", self.color[m], self.marker[m], f"{m} hard",
+                           f"{m} {_t('random')}") or ns
+                _line(ax, self.an[m], "noise", self.color[m], self.marker[m], f"{m} {_t('hard')}",
                       ls="--")
             _logx(ax, ns)
             _pct(ax, SCORE_NAME[task])
-            ax.set_title(TASK_TITLE[task])
+            ax.set_title(_t(TASK_TITLE[task]))
             ax.legend(loc="lower left", fontsize=7)
-        _title(fig, "Noise type: random (solid) vs hard negatives (dashed)")
+        _title(fig, _t("Noise type: random (solid) vs hard negatives (dashed)"))
         return _save(fig, self.out, "fig2_noise_types")
 
     def position(self):
@@ -139,19 +188,19 @@ class Figures:
             for i in range(grid.shape[0]):
                 for j in range(grid.shape[1]):
                     if not np.isnan(grid[i, j]):
-                        ax.text(j, i, f"{grid[i, j]:.0%}", ha="center", va="center", fontsize=8,
+                        ax.text(j, i, _pct_label(grid[i, j]), ha="center", va="center", fontsize=8,
                                 color="white" if grid[i, j] > 0.6 else INK)
             ax.set_xticks(range(len(ns)), [str(n) for n in ns])
             ax.set_yticks(range(3), [r[1] for r in depth_rows] if k % cols == 0 else [])
             ax.grid(False)
             ax.set_title(models[k], fontsize=9.5)
             if k % cols == 0:
-                ax.set_ylabel("Signal depth")
+                ax.set_ylabel(_t("Signal depth"))
             if k // cols == rows - 1:
                 ax.set_xlabel("N")
         if im is not None:
-            fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.7, label="Score")
-        _title(fig, "Position: score by signal depth and N")
+            fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.7, label=_t("Score"))
+        _title(fig, _t("Position: score by signal depth and N"))
         return _save(fig, self.out, "fig3_position_heatmap")
 
     def redundancy(self):
@@ -170,14 +219,14 @@ class Figures:
             ma = self.an[models[k]]
             ns = []
             for curve, lab, col, mk in series:
-                ns = _line(ax, ma, curve, col, mk, lab) or ns
+                ns = _line(ax, ma, curve, col, mk, _t(lab)) or ns
             _logx(ax, ns)
             ax.set_xlabel("N")
             _pct(ax, SCORE_NAME[ma.task] if k % cols == 0 else "")
             ax.set_title(models[k], fontsize=9.5)
         handles, labels = axes.flat[0].get_legend_handles_labels()
         fig.legend(handles, labels, loc="upper center", ncol=3, bbox_to_anchor=(0.5, 0.0))
-        _title(fig, "Redundancy: does repeating the signal slow the decline?")
+        _title(fig, _t("Redundancy: does repeating the signal slow the decline?"))
         fig.tight_layout()
         return _save(fig, self.out, "fig4_redundancy")
 
@@ -200,7 +249,7 @@ class Figures:
             for i, n in enumerate(ns):
                 for j, pos in enumerate(("before", "after")):
                     x.append(i * 2.6 + j)
-                    labels.append(f"{pos[0].upper()}\n{n}")
+                    labels.append(f"{_t(pos[0].upper())}\n{n}")
             x = np.array(x, float)
             bottom = np.zeros(len(x))
             for oc in ("true", "conflicting", "tie", "other"):
@@ -209,11 +258,11 @@ class Figures:
                                  for n in ns for pos in ("before", "after")])
                 if not vals.any():
                     continue
-                ax.bar(x, vals, bottom=bottom, width=0.85, color=OUTCOME[oc], label=oc,
+                ax.bar(x, vals, bottom=bottom, width=0.85, color=OUTCOME[oc], label=_t(oc),
                        edgecolor=SURFACE, linewidth=1.5)
                 bottom += vals
             ax.set_xticks(x, labels, fontsize=7)
-            _pct(ax, "Share" if k % cols == 0 else "")
+            _pct(ax, _t("Share") if k % cols == 0 else "")
             ax.grid(axis="x", visible=False)
             ax.set_title(models[k], fontsize=9.5)
         handles, labs = [], []
@@ -223,7 +272,7 @@ class Figures:
                     handles.append(h)
                     labs.append(lab)
         fig.legend(handles, labs, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 0.0))
-        _title(fig, "Contradiction: conflict placed Before or After the signal, by N")
+        _title(fig, _t("Contradiction: conflict placed Before or After the signal, by N"))
         fig.tight_layout()
         return _save(fig, self.out, "fig5_contradiction")
 
@@ -232,7 +281,7 @@ class Figures:
         if not models:
             return []
         fig, ax = plt.subplots(figsize=(5.2, 4.4))
-        ax.plot([0, 1], [0, 1], color=GRID, lw=1, ls=":", label="perfect calibration")
+        ax.plot([0, 1], [0, 1], color=GRID, lw=1, ls=":", label=_t("perfect calibration"))
         for m in models:
             ma = self.an[m]
             ns = [n for n in ma.ns("dilution") if ("confidence", "dilution", n) in ma.stats]
@@ -242,21 +291,21 @@ class Figures:
                     markeredgecolor=SURFACE)
             ax.annotate(f"N={ns[-1]}", (xs[-1], ys[-1]), xytext=(4, -10),
                         textcoords="offset points", fontsize=7, color=INK2)
-        ax.set_xlabel("Mean confidence")
+        ax.set_xlabel(_t("Mean confidence"))
         ax.set_xlim(0, 1.02)
         _pct(ax, "Score")
         ax.legend(loc="upper left", fontsize=8)
-        _title(fig, "Calibration as N grows (random filler)")
+        _title(fig, _t("Calibration as N grows (random filler)"))
         return _save(fig, self.out, "fig6_calibration")
 
     def leaderboard(self, board):
-        cells = [[r["task"], r["model"], CURVES[r["axis"]][0],
+        cells = [[_t(r["task"]), r["model"], _t(CURVES[r["axis"]][0]),
                   f"{r['SSS']:.3f} [{r['SSS_low']:.3f}, {r['SSS_high']:.3f}]", str(r["N*"]),
                   str(r["N†"])] for _, r in board.iterrows()]
         fig, ax = plt.subplots(figsize=(10, 0.27 * (len(cells) + 2)))
         ax.axis("off")
-        t = ax.table(cellText=cells, colLabels=["task", "model", "axis", "SSS [95% CI]", "N*",
-                                                "N†"], loc="center", cellLoc="left",
+        t = ax.table(cellText=cells, colLabels=[_t(c) for c in ("task", "model", "axis",
+                                                           "SSS [95% CI]", "N*", "N†")], loc="center", cellLoc="left",
                      colLoc="left")
         t.auto_set_font_size(False)
         t.set_fontsize(7.5)
@@ -266,15 +315,20 @@ class Figures:
             cell.set_facecolor(SURFACE)
             if r == 0:
                 cell.set_text_props(weight="bold")
-        ax.set_title("Leaderboard: SSS, saturation point N*, degradation onset N†", loc="left",
+        ax.set_title(_t("Leaderboard: SSS, saturation point N*, degradation onset N†"),
+                 loc="left",
                      fontsize=11, fontweight="bold")
         return _save(fig, self.out, "fig7_leaderboard")
 
 
-def make_all(analyses, board, model_order, out: Path) -> list[Path]:
+def make_all(analyses, board, model_order, out: Path, lang: str = "en") -> list[Path]:
+    global LANG
+    LANG = lang
     _style()
     f = Figures(analyses, model_order, out)
     paths = []
     for fn in (f.main, f.noise, f.position, f.redundancy, f.contradiction, f.calibration):
         paths += fn()
-    return paths + f.leaderboard(board)
+    paths += f.leaderboard(board)
+    LANG = "en"
+    return paths

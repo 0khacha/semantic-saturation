@@ -37,6 +37,6 @@ os.chdir(WORK)
 sh("git log -1 --format='commit %h %s'")
 sh("pip install -q -e '.[analysis]'")
 for step in STEPS:
-    extra = " --readme" if step == "report" else ""
+    extra = " --readme --fr" if step == "report" else ""
     sh(f"ssb {step} --config {CONFIG}{extra}")
 sh("ls -la data results/* figures | head -60")
