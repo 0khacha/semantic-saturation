@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 SSB_CONFIG = "configs/main.yaml"
-EXTRA_RUN_ARGS = "--probe-only"  # main run: "--time-limit-hours 11"
+EXTRA_RUN_ARGS = "--time-limit-hours 11"  # estimate only: "--probe-only"
 REPORT = "--probe-only" not in EXTRA_RUN_ARGS
 REPO = "https://github.com/0khacha/semantic-saturation.git"
 WORK = "/kaggle/working/ssb"
