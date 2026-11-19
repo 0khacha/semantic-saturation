@@ -117,6 +117,12 @@ def test_entity_swap_replaces_every_occurrence(swapper):
     assert swapper.answer_types([(ctx, "bridge", 9)]) == [None]  # not an entity: no swap
 
 
+def test_entity_swap_ignores_case_like_the_dataset_check(swapper):
+    ctx = "Oxygen was named by Lavoisier. Liquid oxygen is pale blue."
+    new, repl = swapper.swap(ctx, ["Oxygen"], "GPE", random.Random(0))
+    assert not contains_answer(new, "Oxygen") and new.count(repl) == 2
+
+
 def test_cross_class_picks_another_label():
     pool = {0: ["a"], 1: ["b"], 2: ["c"], 3: ["d"]}
     for seed in range(20):

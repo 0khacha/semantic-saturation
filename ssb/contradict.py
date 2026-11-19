@@ -18,7 +18,9 @@ SWAPPABLE = {"PERSON", "ORG", "GPE", "LOC", "NORP", "DATE", "CARDINAL", "EVENT",
 
 
 def _pattern(answer: str) -> re.Pattern:
-    return re.compile(rf"(?<!\w){re.escape(answer)}(?!\w)")
+    # case-insensitive, like the dataset check (contains_answer): "Oxygen" must also go
+    # where the paragraph writes "oxygen"
+    return re.compile(rf"(?<!\w){re.escape(answer)}(?!\w)", re.I)
 
 
 class EntitySwapper:
@@ -78,7 +80,7 @@ class EntitySwapper:
         repl = rng.choice(candidates)
         new = context
         for a in sorted(answers, key=len, reverse=True):  # every gold alias goes
-            new = _pattern(a).sub(repl, new)
+            new = _pattern(a).sub(lambda _m: repl, new)
         if new == context or any(_pattern(a).search(new) for a in answers):
             return None
         return new, repl
