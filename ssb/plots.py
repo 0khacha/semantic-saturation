@@ -199,7 +199,9 @@ class Figures:
             if k // cols == rows - 1:
                 ax.set_xlabel("N")
         if im is not None:
-            fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.7, label=_t("Score"))
+            cb = fig.colorbar(im, ax=axes.ravel().tolist(), shrink=0.7, label=_t("Score"))
+            cb.set_ticks([0, 0.25, 0.5, 0.75, 1],
+                         labels=[_pct_label(v) for v in (0, 0.25, 0.5, 0.75, 1)])
         _title(fig, _t("Position: score by signal depth and N"))
         return _save(fig, self.out, "fig3_position_heatmap")
 
@@ -282,6 +284,7 @@ class Figures:
             return []
         fig, ax = plt.subplots(figsize=(5.2, 4.4))
         ax.plot([0, 1], [0, 1], color=GRID, lw=1, ls=":", label=_t("perfect calibration"))
+        ends: list[tuple[float, float]] = []
         for m in models:
             ma = self.an[m]
             ns = [n for n in ma.ns("dilution") if ("confidence", "dilution", n) in ma.stats]
@@ -289,10 +292,15 @@ class Figures:
             ys = [ma.score("dilution", n).point for n in ns]
             ax.plot(xs, ys, color=self.color[m], marker=self.marker[m], label=m,
                     markeredgecolor=SURFACE)
-            ax.annotate(f"N={ns[-1]}", (xs[-1], ys[-1]), xytext=(4, -10),
-                        textcoords="offset points", fontsize=7, color=INK2)
+            # endpoints that land close together get their labels stacked, not overlapped
+            near = sum(abs(xs[-1] - x) < 0.06 and abs(ys[-1] - y) < 0.06 for x, y in ends)
+            ends.append((xs[-1], ys[-1]))
+            ax.annotate(f"N={ns[-1]}", (xs[-1], ys[-1]), xytext=(-6, -10 - 10 * near),
+                        textcoords="offset points", fontsize=7, color=self.color[m],
+                        ha="right")
         ax.set_xlabel(_t("Mean confidence"))
         ax.set_xlim(0, 1.02)
+        ax.set_xticks([0, 0.25, 0.5, 0.75, 1], [_pct_label(v) for v in (0, 0.25, 0.5, 0.75, 1)])
         _pct(ax, "Score")
         ax.legend(loc="upper left", fontsize=8)
         _title(fig, _t("Calibration as N grows (random filler)"))
