@@ -41,16 +41,25 @@ class EntitySwapper:
             v.sort()
 
     def answer_types(self, items: list[tuple[str, str, int | None]]) -> list[str | None]:
-        """spaCy type of each (context, answer, start) answer span, if it is one entity."""
+        """spaCy type of each (context, answer, start) answer span, if it is essentially one
+        entity: the entity and the answer span overlap by at least 60% of the longer of the
+        two (so "the Denver Broncos" vs entity "Denver Broncos" still counts)."""
         out = []
         contexts = [c for c, _, _ in items]
         for doc, (_, answer, start) in zip(self.nlp.pipe(contexts, batch_size=64), items,
                                            strict=True):
             label = None
+            a0 = start
+            a1 = None if start is None else start + len(answer)
             for e in doc.ents:
-                same_text = e.text.strip() == answer.strip()
-                where_ok = start is None or e.start_char == start
-                if same_text and where_ok and e.label_ in SWAPPABLE:
+                if e.label_ not in SWAPPABLE:
+                    continue
+                if a0 is None:
+                    ok = e.text.strip() == answer.strip()
+                else:
+                    overlap = min(a1, e.end_char) - max(a0, e.start_char)
+                    ok = overlap >= 0.6 * max(len(answer), e.end_char - e.start_char)
+                if ok:
                     label = e.label_
                     break
             out.append(label)
