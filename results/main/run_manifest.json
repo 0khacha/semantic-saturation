@@ -1,0 +1,73 @@
+{
+  "models": {
+    "tfidf-lr": {
+      "task": "classification",
+      "kind": "tfidf_lr",
+      "model_id": null,
+      "estimated_seconds": 47.4,
+      "seconds": 44.5
+    },
+    "bert-truncate": {
+      "task": "classification",
+      "kind": "transformer_cls",
+      "model_id": "textattack/bert-base-uncased-ag-news",
+      "estimated_seconds": 183.0,
+      "seconds": 157.5
+    },
+    "bert-chunk-mean": {
+      "task": "classification",
+      "kind": "transformer_cls",
+      "model_id": "textattack/bert-base-uncased-ag-news",
+      "estimated_seconds": 636.4,
+      "seconds": 698.9
+    },
+    "tfidf": {
+      "task": "retrieval",
+      "kind": "tfidf",
+      "model_id": null,
+      "estimated_seconds": 11.2,
+      "seconds": 10.8
+    },
+    "bm25": {
+      "task": "retrieval",
+      "kind": "bm25",
+      "model_id": null,
+      "estimated_seconds": 8.1,
+      "seconds": 8.3
+    },
+    "minilm": {
+      "task": "retrieval",
+      "kind": "dense",
+      "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+      "estimated_seconds": 8.6,
+      "seconds": 3.6
+    },
+    "distilbert-squad": {
+      "task": "qa",
+      "kind": "qa",
+      "model_id": "distilbert-base-cased-distilled-squad",
+      "estimated_seconds": 345.0,
+      "seconds": 339.3
+    },
+    "roberta-squad2": {
+      "task": "qa",
+      "kind": "qa",
+      "model_id": "deepset/roberta-base-squad2",
+      "estimated_seconds": 710.7,
+      "seconds": 706.8
+    }
+  },
+  "config": "main",
+  "dataset": "data/ssb_v0.1.jsonl",
+  "device": "cuda",
+  "environment": {
+    "python": "3.13.16",
+    "torch": "2.11.0+cu130",
+    "transformers": "5.23.0",
+    "sentence_transformers": "6.3.0",
+    "sklearn": "1.9.1",
+    "rank_bm25": null,
+    "spacy": "3.8.18",
+    "gpu": "Tesla T4"
+  }
+}

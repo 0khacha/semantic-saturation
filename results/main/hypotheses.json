@@ -1,0 +1,47 @@
+[
+  {
+    "id": "H1",
+    "verdict": "partly supported",
+    "evidence": "degrades: 8/8, hard worse: 5/8. tfidf-lr: N=1\u2192100 +68.0 [+62.3, +73.3], random\u2212hard -56.3 [-62.0, -49.7]; bert-truncate: N=1\u2192100 +73.7 [+68.7, +78.7], random\u2212hard -20.7 [-26.0, -16.0]; bert-chunk-mean: N=1\u2192100 +72.7 [+67.3, +78.0], random\u2212hard -20.7 [-25.3, -16.7]; tfidf: N=1\u2192100 +5.3 [+3.0, +8.0], random\u2212hard +17.0 [+13.0, +21.3]; bm25: N=1\u2192100 +6.3 [+3.7, +9.3], random\u2212hard +14.3 [+10.3, +18.3]; minilm: N=1\u2192100 +5.7 [+3.3, +8.7], random\u2212hard +28.7 [+23.3, +33.7]; distilbert-squad: N=1\u2192100 +12.0 [+6.0, +18.0], random\u2212hard +28.0 [+20.0, +36.7]; roberta-squad2: N=1\u2192100 +4.0 [+0.6, +8.5], random\u2212hard +8.0 [+3.2, +13.4]"
+  },
+  {
+    "id": "H2",
+    "verdict": "supported",
+    "evidence": "tfidf-lr: d0\u2212d0.5 +0.0 [+0.0, +0.0], d0\u2212d1 +0.0 [+0.0, +0.0]; tfidf: d0\u2212d0.5 +0.0 [+0.0, +0.0], d0\u2212d1 +0.0 [+0.0, +0.0]; bm25: d0\u2212d0.5 +0.0 [+0.0, +0.0], d0\u2212d1 +0.0 [+0.0, +0.0]; bert-truncate N=100: d0 53.7%, d0.5 23.3%, d1 23.3%"
+  },
+  {
+    "id": "H3",
+    "verdict": "supported",
+    "evidence": "position d0\u2212d0.5 +0.0 [+0.0, +0.0], d0\u2212d1 +0.0 [+0.0, +0.0]; dilution N=1\u2192100 +72.7 [+67.3, +78.0]"
+  },
+  {
+    "id": "H4",
+    "verdict": "partly supported",
+    "evidence": "bm25>minilm hard: +13.7 [+7.7, +19.0] *; minilm>bm25 random: +0.7 [-2.3, +4.0]; tfidf>minilm hard: +12.0 [+6.0, +17.7] *; minilm>tfidf random: -0.3 [-3.3, +2.7]"
+  },
+  {
+    "id": "H5",
+    "verdict": "not supported",
+    "evidence": "slows degradation for 4/8 models; tfidf-lr copy\u2212paraphrase gain +0.3 [+0.0, +1.0]; tfidf copy\u2212paraphrase gain -0.7 [-1.7, +0.0]; bert-truncate paraphrase\u2212copy gain -2.3 [-4.7, -0.3]; bert-chunk-mean paraphrase\u2212copy gain +0.0 [+0.0, +0.0]; minilm paraphrase\u2212copy gain +1.0 [+0.0, +2.3]; distilbert-squad paraphrase\u2212copy gain +5.3 [-1.3, +12.0]; roberta-squad2 paraphrase\u2212copy gain -2.7 [-7.6, +2.1]"
+  },
+  {
+    "id": "H6",
+    "verdict": "partly supported (distilbert-squad)",
+    "evidence": "conflict share +33.5 [+28.1, +38.2]%; before \u2212 after +19.6 [+8.8, +29.7] pts (p=0.000)"
+  },
+  {
+    "id": "H6",
+    "verdict": "partly supported (roberta-squad2)",
+    "evidence": "conflict share +30.9 [+25.1, +36.8]%; before \u2212 after +10.7 [+0.1, +21.1] pts (p=0.048)"
+  },
+  {
+    "id": "H7",
+    "verdict": "partly supported",
+    "evidence": "tfidf-lr: overconfidence change +53.0 [+47.2, +58.4] pts; bert-truncate: overconfidence change +72.4 [+67.6, +77.4] pts; bert-chunk-mean: overconfidence change +73.3 [+68.2, +78.2] pts; distilbert-squad: overconfidence change +13.5 [+7.2, +20.2] pts; roberta-squad2: overconfidence change +1.9 [-3.1, +7.1] pts"
+  },
+  {
+    "id": "H8",
+    "verdict": "partly supported",
+    "evidence": "no-answer accuracy drop N=1\u2192100: dilution +0.7 [-4.1, +5.8] pts, noise +6.7 [+0.0, +14.0] pts"
+  }
+]

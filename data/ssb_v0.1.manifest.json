@@ -1,0 +1,226 @@
+{
+  "version": "0.1",
+  "samples": 25950,
+  "bases": {
+    "classification": 300,
+    "retrieval": 300,
+    "qa": 300
+  },
+  "paragraphs": 10900,
+  "by_task_axis": {
+    "classification/contradiction": 2400,
+    "classification/dilution": 1200,
+    "classification/noise": 1200,
+    "classification/position": 2700,
+    "classification/redundancy": 2400,
+    "qa/contradiction": 1200,
+    "qa/dilution": 1200,
+    "qa/noise": 1200,
+    "qa/position": 1350,
+    "qa/redundancy": 1200,
+    "retrieval/contradiction": 2400,
+    "retrieval/dilution": 1200,
+    "retrieval/noise": 1200,
+    "retrieval/position": 2700,
+    "retrieval/redundancy": 2400
+  },
+  "context_tokens_total": 105774105,
+  "context_tokens_max": 13119,
+  "build_info": {
+    "pools": {
+      "random": 3000,
+      "hard": 4963,
+      "dev_paragraphs_normalised": 963
+    },
+    "label_judge": {
+      "model": "fabriceyhc/bert-base-uncased-ag_news",
+      "label_order": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "train_accuracy": 0.9675
+    },
+    "classification_funnel": {
+      "candidates_tried": 384,
+      "with_k-1_label_keeping_paraphrases": 319
+    },
+    "squad_funnel": {
+      "tried": 1088,
+      "answer_is_entity": 374,
+      "swap_ok": 372,
+      "paraphrases_ok": 315
+    },
+    "squad_answer_types": {
+      "DATE": 70,
+      "PERSON": 61,
+      "LAW": 4,
+      "ORG": 46,
+      "CARDINAL": 31,
+      "FAC": 9,
+      "PERCENT": 4,
+      "GPE": 21,
+      "LANGUAGE": 2,
+      "LOC": 21,
+      "NORP": 14,
+      "PRODUCT": 3,
+      "ORDINAL": 1,
+      "QUANTITY": 4,
+      "EVENT": 2,
+      "WORK_OF_ART": 2,
+      "MONEY": 5
+    }
+  },
+  "sha256": {
+    "ssb_v0.1.jsonl": "bcf0b7be8e27cfdb446c9fe176739fed0002d271f2e6fdcf00a8a6dc6c039718",
+    "ssb_v0.1.paragraphs.jsonl": "7e374aabf3348332510f3af11435f44fd6af46e449ecc788109fc8ca87149516"
+  },
+  "config": {
+    "name": "main",
+    "seed": 20261119,
+    "data": {
+      "path": "data/ssb_v0.1.jsonl",
+      "version": "0.1",
+      "raw_dir": "data/raw",
+      "tokenizer": "bert-base-uncased",
+      "paragraph_tokens": 120,
+      "tolerance": 0.1,
+      "examples": {
+        "classification": 300,
+        "retrieval": 300,
+        "qa": 300
+      },
+      "qa_unanswerable_share": 0.5,
+      "random_pool": 3000,
+      "hard_pool": 4000,
+      "selector_model": "sentence-transformers/all-mpnet-base-v2",
+      "ner_model": "en_core_web_sm",
+      "paraphrase_models": [
+        "Helsinki-NLP/opus-mt-en-fr",
+        "Helsinki-NLP/opus-mt-fr-en"
+      ],
+      "label_judge": "fabriceyhc/bert-base-uncased-ag_news",
+      "device": "auto"
+    },
+    "conditions": {
+      "sizes": [
+        1,
+        5,
+        20,
+        100
+      ],
+      "axes": [
+        "dilution",
+        "noise",
+        "redundancy",
+        "contradiction",
+        "position"
+      ],
+      "base_filler": "random",
+      "redundancy_k": 5,
+      "redundancy_modes": [
+        "copy",
+        "paraphrase"
+      ],
+      "contradiction_positions": [
+        "before",
+        "after"
+      ],
+      "depths": [
+        0.0,
+        0.5,
+        1.0
+      ]
+    },
+    "models": [
+      {
+        "name": "tfidf-lr",
+        "task": "classification",
+        "kind": "tfidf_lr",
+        "model_id": null,
+        "long_input": null,
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "bert-truncate",
+        "task": "classification",
+        "kind": "transformer_cls",
+        "model_id": "textattack/bert-base-uncased-ag-news",
+        "long_input": "truncate",
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "bert-chunk-mean",
+        "task": "classification",
+        "kind": "transformer_cls",
+        "model_id": "textattack/bert-base-uncased-ag-news",
+        "long_input": "chunk_mean",
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "tfidf",
+        "task": "retrieval",
+        "kind": "tfidf",
+        "model_id": null,
+        "long_input": null,
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "bm25",
+        "task": "retrieval",
+        "kind": "bm25",
+        "model_id": null,
+        "long_input": null,
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "minilm",
+        "task": "retrieval",
+        "kind": "dense",
+        "model_id": "sentence-transformers/all-MiniLM-L6-v2",
+        "long_input": null,
+        "handles_unanswerable": true,
+        "batch_size": 32
+      },
+      {
+        "name": "distilbert-squad",
+        "task": "qa",
+        "kind": "qa",
+        "model_id": "distilbert-base-cased-distilled-squad",
+        "long_input": null,
+        "handles_unanswerable": false,
+        "batch_size": 32
+      },
+      {
+        "name": "roberta-squad2",
+        "task": "qa",
+        "kind": "qa",
+        "model_id": "deepset/roberta-base-squad2",
+        "long_input": null,
+        "handles_unanswerable": true,
+        "batch_size": 32
+      }
+    ],
+    "run": {
+      "output_dir": "results/main",
+      "device": "auto",
+      "max_seq_len": 384,
+      "doc_stride": 128,
+      "examples": null
+    },
+    "eval": {
+      "bootstrap": 1000,
+      "ci": 0.95,
+      "saturation_epsilon": 0.01,
+      "alpha": 0.05,
+      "ece_bins": 10
+    },
+    "figures_dir": "figures"
+  }
+}
