@@ -17,7 +17,7 @@ Projet du module *Traitement Automatique du Langage Naturel*, École Nationale S
 de l'Intelligence Artificielle et Sciences des Données (ENSIASD), Taroudant.
 
 - Yassine Bouachrine ([@yassinebouachrine](https://github.com/yassinebouachrine))
-- Abdeljalil Nahimy
+- Abdeljalil Nahimy ([@abdelnahimy](https://github.com/abdelnahimy))
 - Mohamed Khacha ([@0khacha](https://github.com/0khacha))
 - Abdelali Hirri ([@A4Crzn](https://github.com/A4Crzn))
 
