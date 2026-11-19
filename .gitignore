@@ -30,3 +30,7 @@ results/cache/
 
 # Smoke-test dataset (rebuilt in minutes; the v0.1 dataset is versioned)
 data/ssb_smoke.*
+
+# Smoke-run outputs (pipeline check only; rebuilt with ssb run/report)
+results/smoke/
+figures/smoke/
