@@ -22,6 +22,7 @@ def sh(cmd: str) -> None:
         sys.exit(code)
 
 
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 import torch  # noqa: E402
 
 print("torch", torch.__version__, "| CUDA available:", torch.cuda.is_available(), flush=True)

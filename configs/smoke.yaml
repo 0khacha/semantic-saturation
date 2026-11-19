@@ -27,7 +27,7 @@ conditions:
 models:
   - name: qwen2.5-1.5b
     model_id: Qwen/Qwen2.5-1.5B-Instruct
-    max_batch_tokens: 24576
+    max_batch_tokens: 16384    # N=100 prompts run one at a time
     prior_tokens_per_s: 5000
 
 generation:

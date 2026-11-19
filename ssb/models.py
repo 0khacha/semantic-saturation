@@ -70,6 +70,8 @@ class HFBackend(Backend):
                                                           **kwargs)
         self.model.eval()
         self.device = self.model.device
+        if self.cuda:
+            _memory_efficient_attention_only()
         eos = self.model.generation_config.eos_token_id
         eos = eos if isinstance(eos, list) else [eos]
         self.stop_ids = {i for i in eos + [self.tok.eos_token_id] if i is not None}
@@ -77,6 +79,19 @@ class HFBackend(Backend):
     def render(self, prompt: str) -> str:
         return self.tok.apply_chat_template(chat_messages(prompt), tokenize=False,
                                             add_generation_prompt=True)
+
+    def _attention_ctx(self):
+        """On CUDA, forbid the "math" SDPA kernel: it builds the full N x N attention
+        matrix (6+ GiB at 12k tokens). A context that cannot use a fused kernel then
+        fails loudly instead of silently exhausting memory."""
+        import contextlib
+
+        if not self.cuda:
+            return contextlib.nullcontext()
+        from torch.nn.attention import SDPBackend, sdpa_kernel
+
+        return sdpa_kernel([SDPBackend.FLASH_ATTENTION, SDPBackend.EFFICIENT_ATTENTION,
+                            SDPBackend.CUDNN_ATTENTION])
 
     def count_prompt_tokens(self, prompt: str) -> int:
         return len(self.tok(self.render(prompt), add_special_tokens=False).input_ids)
@@ -95,9 +110,12 @@ class HFBackend(Backend):
 
     def _generate(self, prompts: list[str]) -> list[dict]:
         torch = self.torch
+        # Pad to a multiple of 64 so the padding mask stays aligned for the
+        # memory-efficient attention kernel (unaligned masks fall back to "math").
         enc = self.tok([self.render(p) for p in prompts], return_tensors="pt", padding=True,
+                       pad_to_multiple_of=64 if len(prompts) > 1 else None,
                        add_special_tokens=False).to(self.device)
-        with torch.inference_mode():
+        with torch.inference_mode(), self._attention_ctx():
             out = self.model.generate(
                 **enc, max_new_tokens=self.max_new_tokens, do_sample=False,
                 temperature=None, top_p=None, top_k=None, repetition_penalty=1.0,
@@ -121,6 +139,19 @@ class HFBackend(Backend):
         if self.cuda:
             torch.cuda.empty_cache()
         return results
+
+
+def _memory_efficient_attention_only() -> None:
+    """Stop transformers from passing enable_gqa=True to SDPA.
+
+    Without a padding mask (one prompt per batch) transformers asks SDPA for native
+    grouped-query attention, which GPUs without flash attention (such as the T4) can
+    only run with the "math" kernel. Repeating the key/value heads instead costs a few
+    MB per layer and lets the memory-efficient kernel run.
+    """
+    from transformers.integrations import sdpa_attention
+
+    sdpa_attention.use_gqa_in_sdpa = lambda *args, **kwargs: False
 
 
 # --------------------------------------------------------------------------- vLLM
