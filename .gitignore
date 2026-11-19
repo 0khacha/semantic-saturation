@@ -27,3 +27,6 @@ paper/*.synctex.gz
 
 # Generation cache (the per-run results/<run>/generations/ files are what we publish)
 results/cache/
+
+# Smoke-test dataset (rebuilt in minutes; the v0.1 dataset is versioned)
+data/ssb_smoke.*

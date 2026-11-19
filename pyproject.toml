@@ -5,34 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ssb"
 version = "0.1.0"
-description = "Semantic Saturation Benchmark: does more context help a language model, and when does it start to hurt?"
+description = "Semantic Saturation Benchmark: does more context help classic NLP models, and when does it start to hurt?"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 authors = [{ name = "Mohamed Khacha" }]
+# torch is deliberately unpinned: use the CUDA (or CPU) build your platform ships, as
+# Kaggle and Colab preinstall one. Exact versions used are saved with every run.
 dependencies = [
     "pyyaml==6.0.3",
+    "numpy==2.4.6",
     "tokenizers==0.23.3",
+    "transformers==5.23.0",
+    "sentence-transformers==6.3.0",
+    "sentencepiece==0.2.3",
+    "sacremoses==0.2.0",
+    "datasets==5.2.0",
+    "scikit-learn==1.9.1",
+    "rank-bm25==0.2.2",
+    "spacy==3.8.18",
+    "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
+    "torch",
 ]
 
 [project.optional-dependencies]
-# Only needed to rebuild the dataset (hard-negative ranking); the published file is in data/.
-build = [
-    "sentence-transformers==6.3.0",
-]
-# Model runs. torch is deliberately not pinned: use the CUDA build your platform ships
-# (Kaggle/Colab preinstall one); the exact versions used are saved in run_manifest.json.
-run = [
-    "transformers==5.23.0",
-    "accelerate==1.16.0",
-    "bitsandbytes==0.50.2",
-]
-# Optional faster backend; `backend: auto` uses it when installed and a GPU is present.
-vllm = [
-    "vllm==0.34.0",
-]
 analysis = [
-    "numpy==2.4.6",
     "pandas==3.1.1",
     "pyarrow==26.0.1",
     "matplotlib==3.11.2",
