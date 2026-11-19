@@ -53,10 +53,13 @@ class ModelConfig:
     name: str
     model_id: str
     quantization: str | None = None  # None | "4bit"
-    backend: str = "auto"  # "auto" | "vllm" | "hf"
+    backend: str = "auto"  # "auto" (vLLM if installed with a GPU, else HF) | "vllm" | "hf" | "fake"
+    vllm_model_id: str | None = None  # e.g. an AWQ checkpoint when vLLM serves the 4-bit model
     max_model_len: int = 16384
-    batch_size: int = 8
+    max_batch_size: int = 16
+    max_batch_tokens: int = 24576  # padded prompt tokens per batch (HF backend)
     fallback_model_id: str | None = None  # used when the runtime estimate is too high
+    prior_tokens_per_s: float = 2000.0  # T4 prompt throughput guess for `ssb estimate`
 
 
 @dataclass
@@ -68,7 +71,7 @@ class GenerationConfig:
 @dataclass
 class RunConfig:
     output_dir: str = "results/main"
-    cache_dir: str = ".cache/generations"
+    cache_dir: str = "results/cache"  # kept under results/ so Kaggle saves it with the output
     questions: int | None = None  # take a balanced subset of the dataset (smoke runs)
     max_gpu_hours: float = 6.0
 
@@ -157,8 +160,10 @@ def validate(cfg: Config) -> None:
     for m in cfg.models:
         if m.quantization not in (None, "4bit"):
             raise ConfigError(f"models.{m.name}: quantization must be null or '4bit'")
-        if m.backend not in ("auto", "vllm", "hf"):
-            raise ConfigError(f"models.{m.name}: backend must be auto, vllm or hf")
+        if m.backend not in ("auto", "vllm", "hf", "fake"):
+            raise ConfigError(f"models.{m.name}: backend must be auto, vllm, hf or fake")
+        if m.max_batch_size < 1 or m.max_batch_tokens < 1:
+            raise ConfigError(f"models.{m.name}: batch limits must be positive")
     if cfg.generation.temperature != 0:
         raise ConfigError("generation.temperature must be 0 (greedy) in v0.1")
     if cfg.run.questions is not None and cfg.run.questions < 1:

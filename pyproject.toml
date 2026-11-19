@@ -20,6 +20,23 @@ dependencies = [
 build = [
     "sentence-transformers==6.3.0",
 ]
+# Model runs. torch is deliberately not pinned: use the CUDA build your platform ships
+# (Kaggle/Colab preinstall one); the exact versions used are saved in run_manifest.json.
+run = [
+    "transformers==5.23.0",
+    "accelerate==1.16.0",
+    "bitsandbytes==0.50.2",
+]
+# Optional faster backend; `backend: auto` uses it when installed and a GPU is present.
+vllm = [
+    "vllm==0.34.0",
+]
+analysis = [
+    "numpy==2.4.6",
+    "pandas==3.1.1",
+    "pyarrow==26.0.1",
+    "matplotlib==3.11.2",
+]
 dev = [
     "pytest==9.2.0",
     "ruff==0.16.6",
