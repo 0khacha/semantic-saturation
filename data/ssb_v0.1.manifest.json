@@ -94,19 +94,19 @@
         "max_batch_size": 16,
         "max_batch_tokens": 24576,
         "fallback_model_id": null,
-        "prior_tokens_per_s": 2000.0
+        "prior_tokens_per_s": 5000
       },
       {
         "name": "qwen2.5-7b-4bit",
         "model_id": "Qwen/Qwen2.5-7B-Instruct",
         "quantization": "4bit",
         "backend": "auto",
-        "vllm_model_id": null,
+        "vllm_model_id": "Qwen/Qwen2.5-7B-Instruct-AWQ",
         "max_model_len": 16384,
         "max_batch_size": 16,
         "max_batch_tokens": 24576,
         "fallback_model_id": "Qwen/Qwen2.5-3B-Instruct",
-        "prior_tokens_per_s": 2000.0
+        "prior_tokens_per_s": 1200
       }
     ],
     "generation": {

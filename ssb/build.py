@@ -531,7 +531,8 @@ def write_dataset(cfg: Config, samples: list[dict], paras: dict[str, Paragraph])
         "sha256": {out.name: _sha256(out), ppath.name: _sha256(ppath)},
         "config": config_to_dict(cfg),
     }
-    manifest_path(out).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path(out).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8",
+                                  newline="\n")
     return manifest
 
 

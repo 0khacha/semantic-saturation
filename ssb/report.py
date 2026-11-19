@@ -31,7 +31,8 @@ def evaluate(cfg: Config) -> dict:
     res = analyse(cfg, df)
     res["metrics"].to_parquet(out / "metrics.parquet", index=False)
     res["leaderboard"].to_csv(out / "leaderboard.csv", index=False)
-    (out / "hypotheses.json").write_text(json.dumps(res["hypotheses"], indent=2) + "\n")
+    (out / "hypotheses.json").write_text(json.dumps(res["hypotheses"], indent=2) + "\n",
+                                         encoding="utf-8", newline="\n")
     res["scores"] = df
     return res
 
@@ -186,7 +187,8 @@ def write_report(cfg: Config, update_readme: bool) -> dict:
     make_all(res["analyses"], res["leaderboard"], fig_dir)
     out = Path(cfg.run.output_dir)
     rel = os.path.relpath(fig_dir, out).replace("\\", "/")
-    (out / "REPORT.md").write_text(results_markdown(cfg, res, rel) + "\n", encoding="utf-8")
+    (out / "REPORT.md").write_text(results_markdown(cfg, res, rel) + "\n", encoding="utf-8",
+                                   newline="\n")
     if update_readme:
         readme = Path("README.md")
         text = readme.read_text(encoding="utf-8")

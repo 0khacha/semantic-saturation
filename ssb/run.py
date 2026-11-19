@@ -115,7 +115,8 @@ class Runner:
                               "questions": self.n_questions, "samples": len(self.samples),
                               "max_gpu_hours": self.cfg.run.max_gpu_hours,
                               "environment": library_versions()})
-        self.manifest_path.write_text(json.dumps(self.manifest, indent=2) + "\n")
+        self.manifest_path.write_text(json.dumps(self.manifest, indent=2) + "\n",
+                                      encoding="utf-8", newline="\n")
 
     def _run_batch(self, backend: Backend, batch: list[dict], cache: GenerationCache,
                    keys: list[str]) -> float:
